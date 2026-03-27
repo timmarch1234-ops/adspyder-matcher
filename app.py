@@ -1030,6 +1030,14 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 .copy-btn:hover{{background:#1a1a3e;color:#eee}}
 .copy-btn.copied{{color:#4caf50}}
 #back-top{{position:fixed;bottom:20px;right:20px;background:#e94560;color:white;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;display:none;z-index:999}}
+.controls{{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}}
+.ctrl-btn{{padding:5px 12px;border-radius:4px;cursor:pointer;border:1px solid #2a2a4e;background:#16213e;color:#aaa;font-size:12px}}
+.ctrl-btn.active,.ctrl-btn:hover{{background:#2a2a4e;color:#eee}}
+.grid.small{{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}}
+.grid.large{{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}}
+.grid.small .thumb,.grid.small .vid-loaded{{height:90px}}
+.grid.small .play-btn{{height:90px}}
+.grid.large .thumb,.grid.large .vid-loaded{{height:200px}}
 </style>
 </head>
 <body>
@@ -1041,6 +1049,16 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
   <button class="tab" onclick="switchTab('videos',this)" id="vid-tab">🎬 Videos ({n_vid})</button>
 </div>
 <input class="search-bar" type="text" id="search" placeholder="🔍 Search by filename..." oninput="filterItems(this.value)">
+<div class="controls">
+  <span style="color:#666;font-size:12px">Sort:</span>
+  <button class="ctrl-btn active" onclick="sortItems('name',this)">A–Z</button>
+  <button class="ctrl-btn" onclick="sortItems('name-desc',this)">Z–A</button>
+  <button class="ctrl-btn" onclick="sortItems('type',this)">Type</button>
+  <span style="color:#666;font-size:12px;margin-left:8px">Size:</span>
+  <button class="ctrl-btn" onclick="setGrid('small',this)">S</button>
+  <button class="ctrl-btn active" onclick="setGrid('medium',this)">M</button>
+  <button class="ctrl-btn" onclick="setGrid('large',this)">L</button>
+</div>
 <div class="count-bar" id="count-bar"></div>
 <div id="images" class="section active"><div class="grid" id="img-grid"></div></div>
 <div id="videos" class="section"><div class="grid" id="vid-grid"></div></div>
@@ -1204,10 +1222,45 @@ function filterItems(q) {{
   loadMore();
 }}
 
+// Sort
+let sortMode = 'name';
+function sortItems(mode, btn) {{
+  document.querySelectorAll('.ctrl-btn').forEach(b => {{ if (['A–Z','Z–A','Type'].includes(b.textContent)) b.classList.remove('active'); }});
+  btn.classList.add('active');
+  sortMode = mode;
+  const sorted = (arr, m) => {{
+    const a = [...arr];
+    if (m === 'name') a.sort((x,y) => x.split('/').pop().localeCompare(y.split('/').pop()));
+    if (m === 'name-desc') a.sort((x,y) => y.split('/').pop().localeCompare(x.split('/').pop()));
+    if (m === 'type') a.sort((x,y) => x.split('.').pop().localeCompare(y.split('.').pop()));
+    return a;
+  }};
+  IMAGES = sorted(_LIB_IMAGES_ORIG, mode);
+  VIDEOS = sorted(_LIB_VIDEOS_ORIG, mode);
+  imgIdx = 0; vidIdx = 0;
+  document.getElementById('img-grid').innerHTML = '';
+  document.getElementById('vid-grid').innerHTML = '';
+  _filtered = null;
+  document.getElementById('search').value = '';
+  loadMore();
+}}
+
+// Grid size
+function setGrid(size, btn) {{
+  document.querySelectorAll('.ctrl-btn').forEach(b => {{ if (['S','M','L'].includes(b.textContent)) b.classList.remove('active'); }});
+  btn.classList.add('active');
+  const grids = document.querySelectorAll('.grid');
+  grids.forEach(g => {{ g.classList.remove('small','large'); if (size !== 'medium') g.classList.add(size); }});
+}}
+
+let _LIB_IMAGES_ORIG = [], _LIB_VIDEOS_ORIG = [];
+
 // Fetch data then render
 fetch('/library/data').then(r=>r.json()).then(data => {{
-  IMAGES = data.images;
-  VIDEOS = data.videos;
+  _LIB_IMAGES_ORIG = data.images;
+  _LIB_VIDEOS_ORIG = data.videos;
+  IMAGES = [...data.images];
+  VIDEOS = [...data.videos];
   document.getElementById('loading').textContent = '';
   loadMore();
 }});
