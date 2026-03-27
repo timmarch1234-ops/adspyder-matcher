@@ -1023,6 +1023,10 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 .play-btn:hover{{background:#1a1a3e}}
 .vid-loaded{{width:100%;height:140px;object-fit:cover;display:block}}
 #loading{{text-align:center;padding:16px;color:#888;font-size:13px}}
+#progress{{width:100%;max-width:400px;height:4px;background:#1a1a2e;border-radius:2px;margin:0 auto 16px;display:none}}
+#progress-bar{{height:4px;background:#e94560;border-radius:2px;width:0%;transition:width .3s}}
+.item:hover .copy-btn{{color:#ccc}}
+.item .copy-btn{{transition:color .15s}}
 .search-bar{{width:100%;max-width:400px;display:block;margin:0 auto 16px;padding:10px 14px;border-radius:6px;border:1px solid #2a2a4e;background:#16213e;color:#eee;font-size:14px}}
 .search-bar::placeholder{{color:#666}}
 .count-bar{{text-align:center;color:#666;font-size:12px;margin-bottom:8px}}
@@ -1062,6 +1066,7 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 <div class="count-bar" id="count-bar"></div>
 <div id="images" class="section active"><div class="grid" id="img-grid"></div></div>
 <div id="videos" class="section"><div class="grid" id="vid-grid"></div></div>
+<div id="progress"><div id="progress-bar"></div></div>
 <div id="loading">Loading...</div>
 <button id="back-top" onclick="window.scrollTo({{top:0,behavior:'smooth'}})" title="Back to top">↑</button>
 <script>
@@ -1256,13 +1261,42 @@ function setGrid(size, btn) {{
 let _LIB_IMAGES_ORIG = [], _LIB_VIDEOS_ORIG = [];
 
 // Fetch data then render
-fetch('/library/data').then(r=>r.json()).then(data => {{
+document.getElementById('progress').style.display = 'block';
+fetch('/library/data').then(r => {{
+  const total = parseInt(r.headers.get('content-length') || 0);
+  const reader = r.body.getReader();
+  let received = 0;
+  const chunks = [];
+  function pump() {{
+    return reader.read().then(({{{{'done': done, 'value': value}}}}) => {{
+      if (done) {{
+        document.getElementById('progress').style.display = 'none';
+        return JSON.parse(new TextDecoder().decode(new Uint8Array(chunks.flat())));
+      }}
+      chunks.push(Array.from(value));
+      received += value.length;
+      if (total) document.getElementById('progress-bar').style.width = Math.min(100, received/total*100) + '%';
+      return pump();
+    }});
+  }}
+  return pump();
+}}).then(data => {{
   _LIB_IMAGES_ORIG = data.images;
   _LIB_VIDEOS_ORIG = data.videos;
   IMAGES = [...data.images];
   VIDEOS = [...data.videos];
   document.getElementById('loading').textContent = '';
   loadMore();
+}}).catch(err => {{
+  // Fallback to simple fetch if streaming fails
+  fetch('/library/data').then(r=>r.json()).then(data => {{
+    _LIB_IMAGES_ORIG = data.images;
+    _LIB_VIDEOS_ORIG = data.videos;
+    IMAGES = [...data.images];
+    VIDEOS = [...data.videos];
+    document.getElementById('loading').textContent = '';
+    loadMore();
+  }});
 }});
 </script>
 </body>
