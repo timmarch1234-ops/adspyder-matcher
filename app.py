@@ -984,17 +984,9 @@ def library():
     if not session.get("auth"): return redirect("/")
     images = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
     videos = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
-
-    img_html = ""
-    for u in images:
-        fname = u.split("/")[-1]
-        img_html += '<div class="item"><a href="' + u + '" target="_blank"><img src="' + u + '" loading="lazy" onerror="this.style.display=\'none\'"></a><div class="label">' + fname + '</div></div>'
-
-    vid_html = ""
-    for u in videos:
-        fname = u.split("/")[-1]
-        vid_html += f'<div class="item"><a href="{u}" target="_blank"><video src="{u}" muted playsinline preload="none" onmouseenter="this.play()" onmouseleave="this.pause()"></video></a><div class="label">{fname}</div></div>'
-
+    import json as _json
+    images_json = _json.dumps(images)
+    videos_json = _json.dumps(videos)
     total = len(OUR_LINKS)
     n_img = len(images)
     n_vid = len(videos)
@@ -1013,11 +1005,12 @@ h1{{color:#e94560;text-align:center}}
 .tab.active{{background:#e94560;color:#fff}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}}
 .item{{background:#16213e;border-radius:8px;overflow:hidden}}
-.item img{{width:100%;height:150px;object-fit:cover;display:block}}
-.item video{{width:100%;height:150px;object-fit:cover;display:block}}
+.item img{{width:100%;height:150px;object-fit:cover;display:block;background:#0d0d1a}}
+.item video{{width:100%;height:150px;object-fit:cover;display:block;background:#0d0d1a}}
 .item .label{{font-size:10px;padding:4px 6px;color:#aaa;word-break:break-all}}
 .section{{display:none}}.section.active{{display:block}}
 a.back{{display:inline-block;margin-bottom:20px;color:#e94560;text-decoration:none}}
+.load-more{{display:block;margin:20px auto;padding:12px 30px;background:#e94560;color:white;border:none;border-radius:5px;cursor:pointer;font-size:14px}}
 </style>
 </head>
 <body>
@@ -1025,22 +1018,61 @@ a.back{{display:inline-block;margin-bottom:20px;color:#e94560;text-decoration:no
 <h1>📁 Content Library</h1>
 <div class="stats">{total} total items &nbsp;|&nbsp; {n_img} images &nbsp;|&nbsp; {n_vid} videos</div>
 <div class="tabs">
-  <button class="tab active" onclick="show('images',this)">🖼 Images ({n_img})</button>
-  <button class="tab" onclick="show('videos',this)">🎬 Videos ({n_vid})</button>
+  <button class="tab active" onclick="switchTab('images',this)">🖼 Images ({n_img})</button>
+  <button class="tab" onclick="switchTab('videos',this)">🎬 Videos ({n_vid})</button>
 </div>
 <div id="images" class="section active">
-  <div class="grid">{img_html}</div>
+  <div class="grid" id="img-grid"></div>
+  <button class="load-more" id="img-more" onclick="loadMore('images')">Load More</button>
 </div>
 <div id="videos" class="section">
-  <div class="grid">{vid_html}</div>
+  <div class="grid" id="vid-grid"></div>
+  <button class="load-more" id="vid-more" onclick="loadMore('videos')">Load More</button>
 </div>
 <script>
-function show(id,btn){{
+const IMAGES = {images_json};
+const VIDEOS = {videos_json};
+const PAGE = 60;
+let imgIdx = 0, vidIdx = 0;
+
+function renderItems(items, startIdx, count, gridId, isVideo) {{
+  const grid = document.getElementById(gridId);
+  const end = Math.min(startIdx + count, items.length);
+  for (let i = startIdx; i < end; i++) {{
+    const u = items[i];
+    const fname = u.split('/').pop();
+    const div = document.createElement('div');
+    div.className = 'item';
+    if (isVideo) {{
+      div.innerHTML = '<a href="' + u + '" target="_blank"><video src="' + u + '" muted playsinline preload="none" onmouseenter="this.play()" onmouseleave="this.pause()"></video></a><div class="label">' + fname + '</div>';
+    }} else {{
+      div.innerHTML = '<a href="' + u + '" target="_blank"><img src="' + u + '" loading="lazy" onerror="this.style.display='none'"></a><div class="label">' + fname + '</div>';
+    }}
+    grid.appendChild(div);
+  }}
+  return end;
+}}
+
+function loadMore(type) {{
+  if (type === 'images') {{
+    imgIdx = renderItems(IMAGES, imgIdx, PAGE, 'img-grid', false);
+    if (imgIdx >= IMAGES.length) document.getElementById('img-more').style.display='none';
+  }} else {{
+    vidIdx = renderItems(VIDEOS, vidIdx, PAGE, 'vid-grid', true);
+    if (vidIdx >= VIDEOS.length) document.getElementById('vid-more').style.display='none';
+  }}
+}}
+
+function switchTab(id, btn) {{
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
 }}
+
+// Load initial batch
+loadMore('images');
+loadMore('videos');
 </script>
 </body>
 </html>"""
