@@ -1019,10 +1019,13 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 .label{{font-size:9px;padding:3px 5px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .section{{display:none}}.section.active{{display:block}}
 .back{{display:inline-block;margin-bottom:16px;color:#e94560;text-decoration:none;font-size:14px}}
-.play-btn{{width:100%;height:140px;background:#0d0d1a;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:32px;border:none;color:#eee}}
+.play-btn{{width:100%;height:140px;background:#0d0d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-size:32px;border:none;color:#eee;transition:background .15s}}
 .play-btn:hover{{background:#1a1a3e}}
 .vid-loaded{{width:100%;height:140px;object-fit:cover;display:block}}
 #loading{{text-align:center;padding:16px;color:#888;font-size:13px}}
+.search-bar{{width:100%;max-width:400px;display:block;margin:0 auto 16px;padding:10px 14px;border-radius:6px;border:1px solid #2a2a4e;background:#16213e;color:#eee;font-size:14px}}
+.search-bar::placeholder{{color:#666}}
+.count-bar{{text-align:center;color:#666;font-size:12px;margin-bottom:8px}}
 </style>
 </head>
 <body>
@@ -1033,6 +1036,8 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
   <button class="tab active" onclick="switchTab('images',this)" id="img-tab">🖼 Images ({n_img})</button>
   <button class="tab" onclick="switchTab('videos',this)" id="vid-tab">🎬 Videos ({n_vid})</button>
 </div>
+<input class="search-bar" type="text" id="search" placeholder="🔍 Search by filename..." oninput="filterItems(this.value)">
+<div class="count-bar" id="count-bar"></div>
 <div id="images" class="section active"><div class="grid" id="img-grid"></div></div>
 <div id="videos" class="section"><div class="grid" id="vid-grid"></div></div>
 <div id="loading">Loading...</div>
@@ -1128,8 +1133,34 @@ function switchTab(id, btn) {{
   loadMore();
 }}
 
+// Search/filter
+let filterQuery = '';
+function filterItems(q) {{
+  filterQuery = q.trim().toLowerCase();
+  imgIdx = 0; vidIdx = 0;
+  document.getElementById('img-grid').innerHTML = '';
+  document.getElementById('vid-grid').innerHTML = '';
+  const filteredImgs = filterQuery ? IMAGES.filter(u => u.split('/').pop().toLowerCase().includes(filterQuery)) : IMAGES;
+  const filteredVids = filterQuery ? VIDEOS.filter(u => u.split('/').pop().toLowerCase().includes(filterQuery)) : VIDEOS;
+  const imgActive = document.getElementById('images').classList.contains('active');
+  if (imgActive) {{
+    imgIdx = renderImages(filteredImgs, 0, PAGE);
+    document.getElementById('count-bar').textContent = filteredImgs.length + ' images';
+  }} else {{
+    vidIdx = renderVideos(filteredVids, 0, PAGE);
+    document.getElementById('count-bar').textContent = filteredVids.length + ' videos';
+  }}
+  window._filtered = {{imgs: filteredImgs, vids: filteredVids}};
+}}
+
+// Override scroll to use filtered lists
 window.addEventListener('scroll', function() {{
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) loadMore();
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {{
+    const imgActive = document.getElementById('images').classList.contains('active');
+    const src = window._filtered || {{imgs: IMAGES, vids: VIDEOS}};
+    if (imgActive && imgIdx < src.imgs.length) imgIdx = renderImages(src.imgs, imgIdx, PAGE);
+    else if (!imgActive && vidIdx < src.vids.length) vidIdx = renderVideos(src.vids, vidIdx, PAGE);
+  }}
 }});
 
 // Fetch data then render
