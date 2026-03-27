@@ -2,6 +2,7 @@ import os, io, json, hashlib, subprocess, tempfile, threading, time, base64
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, request, session, redirect, render_template_string, jsonify, send_file, Response
+from flask_compress import Compress
 import requests as req
 from PIL import Image
 import imagehash
@@ -10,6 +11,7 @@ import fitz  # PyMuPDF
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "adspyder-secret-2024")
+Compress(app)
 
 CLAUDE_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 PASSWORD = os.environ.get("APP_PASSWORD", "1234")
@@ -986,7 +988,9 @@ def get_report(report_id):
 @app.route("/library/data")
 def library_data():
     if not session.get("auth"): return jsonify({"error":"Unauthorized"}), 401
-    return jsonify({"images": _LIB_IMAGES, "videos": _LIB_VIDEOS})
+    resp = jsonify({"images": _LIB_IMAGES, "videos": _LIB_VIDEOS})
+    resp.headers['Cache-Control'] = 'private, max-age=300'
+    return resp
 
 @app.route("/library")
 def library():
