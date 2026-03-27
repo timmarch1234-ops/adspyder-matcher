@@ -1014,7 +1014,7 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 .tab{{padding:10px 24px;border-radius:5px;cursor:pointer;border:none;font-size:14px;background:#16213e;color:#eee;transition:background .2s}}
 .tab.active{{background:#e94560;color:#fff}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}}
-.item{{background:#16213e;border-radius:6px;overflow:hidden;contain:layout style paint}}
+.item{{background:#16213e;border-radius:6px;overflow:hidden;contain:layout style paint;aspect-ratio:160/175}}
 .thumb{{width:100%;height:140px;object-fit:cover;display:block;background:#0d0d1a}}
 .label{{font-size:9px;padding:3px 5px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .section{{display:none}}.section.active{{display:block}}
@@ -1053,7 +1053,7 @@ const imgObserver = new IntersectionObserver((entries) => {{
       imgObserver.unobserve(e.target);
     }}
   }});
-}}, {{rootMargin:'300px 0px'}});
+}}, {{rootMargin:'500px 0px'}});
 
 function renderImages(items, start, count) {{
   const frag = document.createDocumentFragment();
@@ -1067,6 +1067,8 @@ function renderImages(items, start, count) {{
     const img = document.createElement('img');
     img.className = 'thumb';
     img.dataset.src = u;
+    img.width = 160;
+    img.height = 140;
     img.alt = '';
     imgObserver.observe(img);
     a.appendChild(img);
