@@ -1100,19 +1100,18 @@ function renderVideos(items, start, count) {{
     const u = items[i];
     const div = document.createElement('div');
     div.className = 'item';
-    const btn = document.createElement('button');
-    btn.className = 'play-btn';
-    btn.title = u.split('/').pop();
-    const ext = u.split('.').pop().toUpperCase();
-    btn.innerHTML = '<div style="font-size:40px">▶</div><div style="font-size:11px;color:#888;margin-top:4px">' + ext + '</div>';
-    btn.onclick = function() {{
-      const vid = document.createElement('video');
-      vid.src = u; vid.className = 'vid-loaded';
-      vid.controls = true; vid.autoplay = true;
-      vid.muted = true; vid.playsinline = true;
-      btn.replaceWith(vid);
-    }};
-    div.appendChild(btn);
+    const vid = document.createElement('video');
+    vid.src = u;
+    vid.className = 'vid-loaded';
+    vid.muted = true;
+    vid.playsinline = true;
+    vid.preload = 'metadata';
+    vid.addEventListener('mouseenter', function() {{ this.play(); }});
+    vid.addEventListener('mouseleave', function() {{ this.pause(); this.currentTime = 0; }});
+    vid.addEventListener('click', function() {{
+      if (!this.controls) {{ this.controls = true; this.play(); }}
+    }});
+    div.appendChild(vid);
     const lbl = document.createElement('div');
     lbl.className = 'label';
     lbl.textContent = u.split('/').pop();
