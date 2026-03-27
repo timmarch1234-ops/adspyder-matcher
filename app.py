@@ -1014,7 +1014,8 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 .tab{{padding:10px 24px;border-radius:5px;cursor:pointer;border:none;font-size:14px;background:#16213e;color:#eee;transition:background .2s}}
 .tab.active{{background:#e94560;color:#fff}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}}
-.item{{background:#16213e;border-radius:6px;overflow:hidden;contain:layout style paint;aspect-ratio:160/175}}
+.item{{background:#16213e;border-radius:6px;overflow:hidden;contain:layout style paint;aspect-ratio:160/175;transition:transform .15s,box-shadow .15s}}
+.item:hover{{transform:scale(1.03);box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:1;position:relative}}
 .thumb{{width:100%;height:140px;object-fit:cover;display:block;background:#0d0d1a}}
 .label{{font-size:9px;padding:3px 5px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .section{{display:none}}.section.active{{display:block}}
@@ -1260,6 +1261,20 @@ function setGrid(size, btn) {{
 
 let _LIB_IMAGES_ORIG = [], _LIB_VIDEOS_ORIG = [];
 
+// Keyboard shortcut: Ctrl+F or / to focus search
+document.addEventListener('keydown', function(e) {{
+  if ((e.ctrlKey && e.key === 'f') || e.key === '/') {{
+    e.preventDefault();
+    document.getElementById('search').focus();
+    document.getElementById('search').select();
+  }}
+  if (e.key === 'Escape') {{
+    document.getElementById('search').value = '';
+    filterItems('');
+    document.getElementById('search').blur();
+  }}
+}});
+
 // Fetch data then render
 document.getElementById('progress').style.display = 'block';
 fetch('/library/data').then(r => {{
@@ -1285,6 +1300,10 @@ fetch('/library/data').then(r => {{
   _LIB_VIDEOS_ORIG = data.videos;
   IMAGES = [...data.images];
   VIDEOS = [...data.videos];
+  const n_img = IMAGES.length;
+  const n_vid = VIDEOS.length;
+  document.getElementById('img-tab').textContent = '🖼 Images (' + n_img + ')';
+  document.getElementById('vid-tab').textContent = '🎬 Videos (' + n_vid + ')';
   document.getElementById('loading').textContent = '';
   loadMore();
 }}).catch(err => {{
