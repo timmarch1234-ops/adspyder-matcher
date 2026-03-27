@@ -1048,9 +1048,10 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 <button id="back-top" onclick="window.scrollTo({{top:0,behavior:'smooth'}})" title="Back to top">↑</button>
 <script>
 const PAGE = 80;
-let IMAGES = [], VIDEOS = [], imgIdx = 0, vidIdx = 0, loading = false;
+let IMAGES = [], VIDEOS = [], imgIdx = 0, vidIdx = 0;
+let _filtered = null;
 
-// Lazy image observer
+// Lazy load images
 const imgObserver = new IntersectionObserver((entries) => {{
   entries.forEach(e => {{
     if (e.isIntersecting) {{
@@ -1058,13 +1059,26 @@ const imgObserver = new IntersectionObserver((entries) => {{
       imgObserver.unobserve(e.target);
     }}
   }});
-}}, {{rootMargin:'500px 0px'}});
+}}, {{rootMargin:'400px 0px'}});
+
+// Lazy load video thumbnails
+const vidObserver = new IntersectionObserver((entries) => {{
+  entries.forEach(e => {{
+    if (e.isIntersecting) {{
+      const v = e.target;
+      if (!v.src) {{ v.src = v.dataset.src; }}
+      vidObserver.unobserve(v);
+    }}
+  }});
+}}, {{rootMargin:'300px 0px'}});
 
 function renderImages(items, start, count) {{
+  const grid = document.getElementById('img-grid');
   const frag = document.createDocumentFragment();
   const end = Math.min(start + count, items.length);
   for (let i = start; i < end; i++) {{
     const u = items[i];
+    const fname = u.split('/').pop();
     const div = document.createElement('div');
     div.className = 'item';
     const a = document.createElement('a');
@@ -1072,121 +1086,130 @@ function renderImages(items, start, count) {{
     const img = document.createElement('img');
     img.className = 'thumb';
     img.dataset.src = u;
-    img.width = 160;
-    img.height = 140;
-    img.alt = '';
+    img.width = 160; img.height = 140;
+    img.alt = fname;
     imgObserver.observe(img);
     a.appendChild(img);
     div.appendChild(a);
     const lbl = document.createElement('div');
-    lbl.className = 'label';
-    lbl.textContent = u.split('/').pop();
+    lbl.className = 'label'; lbl.textContent = fname;
     div.appendChild(lbl);
     const cp = document.createElement('button');
-    cp.className = 'copy-btn';
-    cp.textContent = '📋 Copy URL';
-    cp.onclick = function(e) {{ e.preventDefault(); navigator.clipboard.writeText(u); cp.textContent='✅ Copied!'; cp.classList.add('copied'); setTimeout(()=>{{cp.textContent='📋 Copy URL';cp.classList.remove('copied');}},1500); }};
+    cp.className = 'copy-btn'; cp.textContent = '📋 Copy URL';
+    cp.onclick = function(e) {{
+      e.preventDefault();
+      navigator.clipboard.writeText(u);
+      cp.textContent = '✅ Copied!'; cp.classList.add('copied');
+      setTimeout(() => {{ cp.textContent = '📋 Copy URL'; cp.classList.remove('copied'); }}, 1500);
+    }};
     div.appendChild(cp);
     frag.appendChild(div);
   }}
-  document.getElementById('img-grid').appendChild(frag);
+  grid.appendChild(frag);
   return end;
 }}
 
 function renderVideos(items, start, count) {{
+  const grid = document.getElementById('vid-grid');
   const frag = document.createDocumentFragment();
   const end = Math.min(start + count, items.length);
   for (let i = start; i < end; i++) {{
     const u = items[i];
+    const fname = u.split('/').pop();
     const div = document.createElement('div');
     div.className = 'item';
     const vid = document.createElement('video');
-    vid.src = u;
     vid.className = 'vid-loaded';
-    vid.muted = true;
-    vid.playsinline = true;
-    vid.preload = 'metadata';
-    vid.addEventListener('mouseenter', function() {{ this.play(); }});
-    vid.addEventListener('mouseleave', function() {{ this.pause(); this.currentTime = 0; }});
+    vid.dataset.src = u;
+    vid.muted = true; vid.playsinline = true; vid.preload = 'none';
+    vidObserver.observe(vid);
+    vid.addEventListener('mouseenter', function() {{
+      if (!this.src) {{ this.src = this.dataset.src; this.preload = 'metadata'; }}
+      this.play().catch(()=>{{}});
+    }});
+    vid.addEventListener('mouseleave', function() {{
+      this.pause(); this.currentTime = 0;
+    }});
     vid.addEventListener('click', function() {{
-      if (!this.controls) {{ this.controls = true; this.play(); }}
+      if (!this.controls) {{ this.controls = true; this.play().catch(()=>{{}}); }}
     }});
     div.appendChild(vid);
     const lbl = document.createElement('div');
-    lbl.className = 'label';
-    lbl.textContent = u.split('/').pop();
+    lbl.className = 'label'; lbl.textContent = fname;
     div.appendChild(lbl);
-    const cp2 = document.createElement('button');
-    cp2.className = 'copy-btn';
-    cp2.textContent = '📋 Copy URL';
-    cp2.onclick = function(e) {{ e.preventDefault(); navigator.clipboard.writeText(u); cp2.textContent='✅ Copied!'; cp2.classList.add('copied'); setTimeout(()=>{{cp2.textContent='📋 Copy URL';cp2.classList.remove('copied');}},1500); }};
-    div.appendChild(cp2);
+    const cp = document.createElement('button');
+    cp.className = 'copy-btn'; cp.textContent = '📋 Copy URL';
+    cp.onclick = function(e) {{
+      e.preventDefault();
+      navigator.clipboard.writeText(u);
+      cp.textContent = '✅ Copied!'; cp.classList.add('copied');
+      setTimeout(() => {{ cp.textContent = '📋 Copy URL'; cp.classList.remove('copied'); }}, 1500);
+    }};
+    div.appendChild(cp);
     frag.appendChild(div);
   }}
-  document.getElementById('vid-grid').appendChild(frag);
+  grid.appendChild(frag);
   return end;
 }}
 
+function getSource() {{
+  return _filtered || {{imgs: IMAGES, vids: VIDEOS}};
+}}
+
 function loadMore() {{
-  if (loading) return;
+  const src = getSource();
   const imgActive = document.getElementById('images').classList.contains('active');
-  if (imgActive && imgIdx < IMAGES.length) {{
-    imgIdx = renderImages(IMAGES, imgIdx, PAGE);
+  if (imgActive && imgIdx < src.imgs.length) {{
+    imgIdx = renderImages(src.imgs, imgIdx, PAGE);
+  }} else if (!imgActive && vidIdx < src.vids.length) {{
+    vidIdx = renderVideos(src.vids, vidIdx, PAGE);
   }}
-  const vidActive = document.getElementById('videos').classList.contains('active');
-  if (vidActive && vidIdx < VIDEOS.length) {{
-    vidIdx = renderVideos(VIDEOS, vidIdx, PAGE);
-  }}
-  const allDone = imgIdx >= IMAGES.length && vidIdx >= VIDEOS.length;
-  document.getElementById('loading').style.display = allDone ? 'none' : 'block';
+  const done = imgActive ? imgIdx >= src.imgs.length : vidIdx >= src.vids.length;
+  document.getElementById('loading').style.display = done ? 'none' : 'block';
 }}
 
 function switchTab(id, btn) {{
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
   loadMore();
 }}
 
-// Back to top + infinite scroll (combined)
+// Back to top + infinite scroll
 window.addEventListener('scroll', function() {{
   document.getElementById('back-top').style.display = window.scrollY > 400 ? 'block' : 'none';
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {{
-    const imgActive = document.getElementById('images').classList.contains('active');
-    const src = window._filtered || {{imgs: IMAGES, vids: VIDEOS}};
-    if (imgActive && imgIdx < src.imgs.length) imgIdx = renderImages(src.imgs, imgIdx, PAGE);
-    else if (!imgActive && vidIdx < src.vids.length) vidIdx = renderVideos(src.vids, vidIdx, PAGE);
-  }}
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) loadMore();
 }});
 
 // Search/filter
-let filterQuery = '';
 function filterItems(q) {{
-  filterQuery = q.trim().toLowerCase();
+  const query = q.trim().toLowerCase();
   imgIdx = 0; vidIdx = 0;
   document.getElementById('img-grid').innerHTML = '';
   document.getElementById('vid-grid').innerHTML = '';
-  const filteredImgs = filterQuery ? IMAGES.filter(u => u.split('/').pop().toLowerCase().includes(filterQuery)) : IMAGES;
-  const filteredVids = filterQuery ? VIDEOS.filter(u => u.split('/').pop().toLowerCase().includes(filterQuery)) : VIDEOS;
-  const imgActive = document.getElementById('images').classList.contains('active');
-  if (imgActive) {{
-    imgIdx = renderImages(filteredImgs, 0, PAGE);
-    document.getElementById('count-bar').textContent = filteredImgs.length + ' images';
+  if (query) {{
+    _filtered = {{
+      imgs: IMAGES.filter(u => u.split('/').pop().toLowerCase().includes(query)),
+      vids: VIDEOS.filter(u => u.split('/').pop().toLowerCase().includes(query))
+    }};
   }} else {{
-    vidIdx = renderVideos(filteredVids, 0, PAGE);
-    document.getElementById('count-bar').textContent = filteredVids.length + ' videos';
+    _filtered = null;
   }}
-  window._filtered = {{imgs: filteredImgs, vids: filteredVids}};
+  const src = getSource();
+  const imgActive = document.getElementById('images').classList.contains('active');
+  const count = imgActive ? src.imgs.length : src.vids.length;
+  const label = imgActive ? 'images' : 'videos';
+  document.getElementById('count-bar').textContent = query ? count + ' ' + label + ' found' : '';
+  loadMore();
 }}
 
 // Fetch data then render
 fetch('/library/data').then(r=>r.json()).then(data => {{
   IMAGES = data.images;
   VIDEOS = data.videos;
-  imgIdx = renderImages(IMAGES, 0, PAGE);
-  vidIdx = renderVideos(VIDEOS, 0, PAGE);
   document.getElementById('loading').textContent = '';
+  loadMore();
 }});
 </script>
 </body>
