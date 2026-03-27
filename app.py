@@ -1023,11 +1023,11 @@ a.back{{display:inline-block;margin-bottom:20px;color:#e94560;text-decoration:no
 </div>
 <div id="images" class="section active">
   <div class="grid" id="img-grid"></div>
-  <button class="load-more" id="img-more" onclick="loadMore('images')">Load More</button>
+  <div class="sentinel" id="img-sentinel"></div>
 </div>
 <div id="videos" class="section">
   <div class="grid" id="vid-grid"></div>
-  <button class="load-more" id="vid-more" onclick="loadMore('videos')">Load More</button>
+  <div class="sentinel" id="vid-sentinel"></div>
 </div>
 <script>
 const IMAGES = {images_json};
