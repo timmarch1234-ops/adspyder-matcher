@@ -1150,9 +1150,15 @@ function switchTab(id, btn) {{
   loadMore();
 }}
 
-// Back to top
+// Back to top + infinite scroll (combined)
 window.addEventListener('scroll', function() {{
   document.getElementById('back-top').style.display = window.scrollY > 400 ? 'block' : 'none';
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {{
+    const imgActive = document.getElementById('images').classList.contains('active');
+    const src = window._filtered || {{imgs: IMAGES, vids: VIDEOS}};
+    if (imgActive && imgIdx < src.imgs.length) imgIdx = renderImages(src.imgs, imgIdx, PAGE);
+    else if (!imgActive && vidIdx < src.vids.length) vidIdx = renderVideos(src.vids, vidIdx, PAGE);
+  }}
 }});
 
 // Search/filter
@@ -1174,16 +1180,6 @@ function filterItems(q) {{
   }}
   window._filtered = {{imgs: filteredImgs, vids: filteredVids}};
 }}
-
-// Override scroll to use filtered lists
-window.addEventListener('scroll', function() {{
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) {{
-    const imgActive = document.getElementById('images').classList.contains('active');
-    const src = window._filtered || {{imgs: IMAGES, vids: VIDEOS}};
-    if (imgActive && imgIdx < src.imgs.length) imgIdx = renderImages(src.imgs, imgIdx, PAGE);
-    else if (!imgActive && vidIdx < src.vids.length) vidIdx = renderVideos(src.vids, vidIdx, PAGE);
-  }}
-}});
 
 // Fetch data then render
 fetch('/library/data').then(r=>r.json()).then(data => {{
