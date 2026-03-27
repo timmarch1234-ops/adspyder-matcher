@@ -1046,7 +1046,7 @@ function renderItems(items, startIdx, count, gridId, isVideo) {{
     if (isVideo) {{
       div.innerHTML = '<a href="' + u + '" target="_blank"><video src="' + u + '" muted playsinline preload="none" onmouseenter="this.play()" onmouseleave="this.pause()"></video></a><div class="label">' + fname + '</div>';
     }} else {{
-      div.innerHTML = '<a href="' + u + '" target="_blank"><img src="' + u + '" loading="lazy" onerror="this.style.display='none'"></a><div class="label">' + fname + '</div>';
+      div.innerHTML = '<a href="' + u + '" target="_blank"><img src="' + u + '" loading="lazy"></a><div class="label">' + fname + '</div>';
     }}
     grid.appendChild(div);
   }}
