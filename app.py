@@ -513,6 +513,10 @@ OUR_LINKS = [
     "https://cdn.twinklingtree.com/9987315944.jpg",    "https://cdn.twinklingtree.com/9993224792.jpg",
 ]
 
+# Pre-filter at startup for fast library responses
+_LIB_IMAGES = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
+_LIB_VIDEOS = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
+
 def load_db():
     if MATCHES_DB.exists():
         return json.loads(MATCHES_DB.read_text())
@@ -982,18 +986,14 @@ def get_report(report_id):
 @app.route("/library/data")
 def library_data():
     if not session.get("auth"): return jsonify({"error":"Unauthorized"}), 401
-    images = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
-    videos = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
-    return jsonify({"images": images, "videos": videos})
+    return jsonify({"images": _LIB_IMAGES, "videos": _LIB_VIDEOS})
 
 @app.route("/library")
 def library():
     if not session.get("auth"): return redirect("/")
     total = len(OUR_LINKS)
-    images = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
-    videos = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
-    n_img = len(images)
-    n_vid = len(videos)
+    n_img = len(_LIB_IMAGES)
+    n_vid = len(_LIB_VIDEOS)
     return f"""<!DOCTYPE html>
 <html>
 <head>
