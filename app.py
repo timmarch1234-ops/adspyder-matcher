@@ -979,88 +979,140 @@ def get_report(report_id):
             return jsonify(r)
     return jsonify({"error":"Not found"}), 404
 
+@app.route("/library/data")
+def library_data():
+    if not session.get("auth"): return jsonify({"error":"Unauthorized"}), 401
+    images = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
+    videos = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
+    return jsonify({"images": images, "videos": videos})
+
 @app.route("/library")
 def library():
     if not session.get("auth"): return redirect("/")
+    total = len(OUR_LINKS)
     images = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
     videos = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
-    import json as _json
-    images_json = _json.dumps(images)
-    videos_json = _json.dumps(videos)
-    total = len(OUR_LINKS)
     n_img = len(images)
     n_vid = len(videos)
-
     return f"""<!DOCTYPE html>
 <html>
 <head>
 <title>Content Library</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://cdn.twinklingtree.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.twinklingtree.com">
 <style>
-body{{font-family:Arial,sans-serif;background:#1a1a2e;color:#eee;margin:0;padding:20px}}
-h1{{color:#e94560;text-align:center}}
-.stats{{text-align:center;color:#aaa;margin-bottom:20px;font-size:14px}}
-.tabs{{display:flex;justify-content:center;gap:10px;margin-bottom:20px}}
-.tab{{padding:10px 25px;border-radius:5px;cursor:pointer;border:none;font-size:14px;background:#16213e;color:#eee}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:Arial,sans-serif;background:#1a1a2e;color:#eee;padding:16px}}
+h1{{color:#e94560;text-align:center;margin-bottom:8px}}
+.stats{{text-align:center;color:#aaa;margin-bottom:16px;font-size:13px}}
+.tabs{{display:flex;justify-content:center;gap:10px;margin-bottom:16px}}
+.tab{{padding:10px 24px;border-radius:5px;cursor:pointer;border:none;font-size:14px;background:#16213e;color:#eee;transition:background .2s}}
 .tab.active{{background:#e94560;color:#fff}}
-.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}}
-.item{{background:#16213e;border-radius:8px;overflow:hidden}}
-.item img{{width:100%;height:150px;object-fit:cover;display:block;background:#0d0d1a}}
-.item video{{width:100%;height:150px;object-fit:cover;display:block;background:#0d0d1a}}
-.item .label{{font-size:10px;padding:4px 6px;color:#aaa;word-break:break-all}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}}
+.item{{background:#16213e;border-radius:6px;overflow:hidden;contain:layout style paint}}
+.thumb{{width:100%;height:140px;object-fit:cover;display:block;background:#0d0d1a}}
+.label{{font-size:9px;padding:3px 5px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .section{{display:none}}.section.active{{display:block}}
-a.back{{display:inline-block;margin-bottom:20px;color:#e94560;text-decoration:none}}
-.load-more{{display:block;margin:20px auto;padding:12px 30px;background:#e94560;color:white;border:none;border-radius:5px;cursor:pointer;font-size:14px}}
+.back{{display:inline-block;margin-bottom:16px;color:#e94560;text-decoration:none;font-size:14px}}
+.play-btn{{width:100%;height:140px;background:#0d0d1a;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:32px;border:none;color:#eee}}
+.play-btn:hover{{background:#1a1a3e}}
+.vid-loaded{{width:100%;height:140px;object-fit:cover;display:block}}
+#loading{{text-align:center;padding:16px;color:#888;font-size:13px}}
 </style>
 </head>
 <body>
 <a class="back" href="/">← Back</a>
 <h1>📁 Content Library</h1>
-<div class="stats">{total} total items &nbsp;|&nbsp; {n_img} images &nbsp;|&nbsp; {n_vid} videos</div>
+<div class="stats">{total} total &nbsp;|&nbsp; {n_img} images &nbsp;|&nbsp; {n_vid} videos</div>
 <div class="tabs">
-  <button class="tab active" onclick="switchTab('images',this)">🖼 Images ({n_img})</button>
-  <button class="tab" onclick="switchTab('videos',this)">🎬 Videos ({n_vid})</button>
+  <button class="tab active" onclick="switchTab('images',this)" id="img-tab">🖼 Images ({n_img})</button>
+  <button class="tab" onclick="switchTab('videos',this)" id="vid-tab">🎬 Videos ({n_vid})</button>
 </div>
-<div id="images" class="section active">
-  <div class="grid" id="img-grid"></div>
-  <div class="sentinel" id="img-sentinel"></div>
-</div>
-<div id="videos" class="section">
-  <div class="grid" id="vid-grid"></div>
-  <div class="sentinel" id="vid-sentinel"></div>
-</div>
+<div id="images" class="section active"><div class="grid" id="img-grid"></div></div>
+<div id="videos" class="section"><div class="grid" id="vid-grid"></div></div>
+<div id="loading">Loading...</div>
 <script>
-const IMAGES = {images_json};
-const VIDEOS = {videos_json};
-const PAGE = 60;
-let imgIdx = 0, vidIdx = 0;
+const PAGE = 50;
+let IMAGES = [], VIDEOS = [], imgIdx = 0, vidIdx = 0, loading = false;
 
-function renderItems(items, startIdx, count, gridId, isVideo) {{
-  const grid = document.getElementById(gridId);
-  const end = Math.min(startIdx + count, items.length);
-  for (let i = startIdx; i < end; i++) {{
+// Lazy image observer
+const imgObserver = new IntersectionObserver((entries) => {{
+  entries.forEach(e => {{
+    if (e.isIntersecting) {{
+      e.target.src = e.target.dataset.src;
+      imgObserver.unobserve(e.target);
+    }}
+  }});
+}}, {{rootMargin:'300px 0px'}});
+
+function renderImages(items, start, count) {{
+  const frag = document.createDocumentFragment();
+  const end = Math.min(start + count, items.length);
+  for (let i = start; i < end; i++) {{
     const u = items[i];
-    const fname = u.split('/').pop();
     const div = document.createElement('div');
     div.className = 'item';
-    if (isVideo) {{
-      div.innerHTML = '<a href="' + u + '" target="_blank"><video src="' + u + '" muted playsinline preload="none" onmouseenter="this.play()" onmouseleave="this.pause()"></video></a><div class="label">' + fname + '</div>';
-    }} else {{
-      div.innerHTML = '<a href="' + u + '" target="_blank"><img src="' + u + '" ></a><div class="label">' + fname + '</div>';
-    }}
-    grid.appendChild(div);
+    const a = document.createElement('a');
+    a.href = u; a.target = '_blank';
+    const img = document.createElement('img');
+    img.className = 'thumb';
+    img.dataset.src = u;
+    img.alt = '';
+    imgObserver.observe(img);
+    a.appendChild(img);
+    div.appendChild(a);
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = u.split('/').pop();
+    div.appendChild(lbl);
+    frag.appendChild(div);
   }}
+  document.getElementById('img-grid').appendChild(frag);
   return end;
 }}
 
-function loadMore(type) {{
-  if (type === 'images') {{
-    imgIdx = renderItems(IMAGES, imgIdx, PAGE, 'img-grid', false);
-    if (imgIdx >= IMAGES.length) document.getElementById('img-more').style.display='none';
-  }} else {{
-    vidIdx = renderItems(VIDEOS, vidIdx, PAGE, 'vid-grid', true);
-    if (vidIdx >= VIDEOS.length) document.getElementById('vid-more').style.display='none';
+function renderVideos(items, start, count) {{
+  const frag = document.createDocumentFragment();
+  const end = Math.min(start + count, items.length);
+  for (let i = start; i < end; i++) {{
+    const u = items[i];
+    const div = document.createElement('div');
+    div.className = 'item';
+    const btn = document.createElement('button');
+    btn.className = 'play-btn';
+    btn.title = u.split('/').pop();
+    btn.innerHTML = '▶';
+    btn.onclick = function() {{
+      const vid = document.createElement('video');
+      vid.src = u; vid.className = 'vid-loaded';
+      vid.controls = true; vid.autoplay = true;
+      vid.muted = true; vid.playsinline = true;
+      btn.replaceWith(vid);
+    }};
+    div.appendChild(btn);
+    const lbl = document.createElement('div');
+    lbl.className = 'label';
+    lbl.textContent = u.split('/').pop();
+    div.appendChild(lbl);
+    frag.appendChild(div);
   }}
+  document.getElementById('vid-grid').appendChild(frag);
+  return end;
+}}
+
+function loadMore() {{
+  if (loading) return;
+  const imgActive = document.getElementById('images').classList.contains('active');
+  if (imgActive && imgIdx < IMAGES.length) {{
+    imgIdx = renderImages(IMAGES, imgIdx, PAGE);
+  }}
+  const vidActive = document.getElementById('videos').classList.contains('active');
+  if (vidActive && vidIdx < VIDEOS.length) {{
+    vidIdx = renderVideos(VIDEOS, vidIdx, PAGE);
+  }}
+  const allDone = imgIdx >= IMAGES.length && vidIdx >= VIDEOS.length;
+  document.getElementById('loading').style.display = allDone ? 'none' : 'block';
 }}
 
 function switchTab(id, btn) {{
@@ -1068,24 +1120,25 @@ function switchTab(id, btn) {{
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
+  loadMore();
 }}
 
-// Load initial batch
-loadMore('images');
-loadMore('videos');
-
-// Infinite scroll
 window.addEventListener('scroll', function() {{
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 400) {{
-    const imgActive = document.getElementById('images').classList.contains('active');
-    const vidActive = document.getElementById('videos').classList.contains('active');
-    if (imgActive && imgIdx < IMAGES.length) loadMore('images');
-    if (vidActive && vidIdx < VIDEOS.length) loadMore('videos');
-  }}
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 600) loadMore();
+}});
+
+// Fetch data then render
+fetch('/library/data').then(r=>r.json()).then(data => {{
+  IMAGES = data.images;
+  VIDEOS = data.videos;
+  imgIdx = renderImages(IMAGES, 0, PAGE);
+  vidIdx = renderVideos(VIDEOS, 0, PAGE);
+  document.getElementById('loading').textContent = '';
 }});
 </script>
 </body>
 </html>"""
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
