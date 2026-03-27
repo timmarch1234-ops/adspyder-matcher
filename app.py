@@ -1037,7 +1037,7 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 <div id="videos" class="section"><div class="grid" id="vid-grid"></div></div>
 <div id="loading">Loading...</div>
 <script>
-const PAGE = 50;
+const PAGE = 80;
 let IMAGES = [], VIDEOS = [], imgIdx = 0, vidIdx = 0, loading = false;
 
 // Lazy image observer
@@ -1086,7 +1086,8 @@ function renderVideos(items, start, count) {{
     const btn = document.createElement('button');
     btn.className = 'play-btn';
     btn.title = u.split('/').pop();
-    btn.innerHTML = '▶';
+    const ext = u.split('.').pop().toUpperCase();
+    btn.innerHTML = '<div style="font-size:40px">▶</div><div style="font-size:11px;color:#888;margin-top:4px">' + ext + '</div>';
     btn.onclick = function() {{
       const vid = document.createElement('video');
       vid.src = u; vid.className = 'vid-loaded';
@@ -1128,7 +1129,7 @@ function switchTab(id, btn) {{
 }}
 
 window.addEventListener('scroll', function() {{
-  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 600) loadMore();
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 800) loadMore();
 }});
 
 // Fetch data then render
