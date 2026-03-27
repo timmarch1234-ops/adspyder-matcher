@@ -983,6 +983,21 @@ def library():
     if not session.get("auth"): return redirect("/")
     images = [u for u in OUR_LINKS if u.lower().endswith(('.jpg','.jpeg','.png','.gif','.webp'))]
     videos = [u for u in OUR_LINKS if u.lower().endswith(('.mp4','.mov','.avi','.webm'))]
+
+    img_html = ""
+    for u in images:
+        fname = u.split("/")[-1]
+        img_html += '<div class="item"><a href="' + u + '" target="_blank"><img src="' + u + '" loading="lazy" onerror="this.style.display=\'none\'"></a><div class="label">' + fname + '</div></div>'
+
+    vid_html = ""
+    for u in videos:
+        fname = u.split("/")[-1]
+        vid_html += f'<div class="item"><a href="{u}" target="_blank"><video src="{u}" muted playsinline preload="none" onmouseenter="this.play()" onmouseleave="this.pause()"></video></a><div class="label">{fname}</div></div>'
+
+    total = len(OUR_LINKS)
+    n_img = len(images)
+    n_vid = len(videos)
+
     return f"""<!DOCTYPE html>
 <html>
 <head>
@@ -996,7 +1011,7 @@ h1{{color:#e94560;text-align:center}}
 .tab{{padding:10px 25px;border-radius:5px;cursor:pointer;border:none;font-size:14px;background:#16213e;color:#eee}}
 .tab.active{{background:#e94560;color:#fff}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}}
-.item{{background:#16213e;border-radius:8px;overflow:hidden;position:relative}}
+.item{{background:#16213e;border-radius:8px;overflow:hidden}}
 .item img{{width:100%;height:150px;object-fit:cover;display:block}}
 .item video{{width:100%;height:150px;object-fit:cover;display:block}}
 .item .label{{font-size:10px;padding:4px 6px;color:#aaa;word-break:break-all}}
@@ -1007,20 +1022,16 @@ a.back{{display:inline-block;margin-bottom:20px;color:#e94560;text-decoration:no
 <body>
 <a class="back" href="/">← Back</a>
 <h1>📁 Content Library</h1>
-<div class="stats">{len(OUR_LINKS)} total items &nbsp;|&nbsp; {len(images)} images &nbsp;|&nbsp; {len(videos)} videos</div>
+<div class="stats">{total} total items &nbsp;|&nbsp; {n_img} images &nbsp;|&nbsp; {n_vid} videos</div>
 <div class="tabs">
-  <button class="tab active" onclick="show('images',this)">🖼 Images ({len(images)})</button>
-  <button class="tab" onclick="show('videos',this)">🎬 Videos ({len(videos)})</button>
+  <button class="tab active" onclick="show('images',this)">🖼 Images ({n_img})</button>
+  <button class="tab" onclick="show('videos',this)">🎬 Videos ({n_vid})</button>
 </div>
 <div id="images" class="section active">
-  <div class="grid">
-    {''.join(f'<div class="item"><a href="{u}" target="_blank"><img src="{u}" loading="lazy" onerror="this.style.display=\'none\'"></a><div class="label">{u.split("/")[-1]}</div></div>' for u in images)}
-  </div>
+  <div class="grid">{img_html}</div>
 </div>
 <div id="videos" class="section">
-  <div class="grid">
-    {''.join(f'<div class="item"><a href="{u}" target="_blank"><video src="{u}" muted playsinline preload="none" onmouseenter="this.play()" onmouseleave="this.pause()"></video></a><div class="label">{u.split("/")[-1]}</div></div>' for u in videos)}
-  </div>
+  <div class="grid">{vid_html}</div>
 </div>
 <script>
 function show(id,btn){{
