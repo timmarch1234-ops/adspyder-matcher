@@ -1278,26 +1278,7 @@ document.addEventListener('keydown', function(e) {{
 }});
 
 // Fetch data then render
-document.getElementById('progress').style.display = 'block';
-fetch('/library/data').then(r => {{
-  const total = parseInt(r.headers.get('content-length') || 0);
-  const reader = r.body.getReader();
-  let received = 0;
-  const chunks = [];
-  function pump() {{
-    return reader.read().then(({{{{'done': done, 'value': value}}}}) => {{
-      if (done) {{
-        document.getElementById('progress').style.display = 'none';
-        return JSON.parse(new TextDecoder().decode(new Uint8Array(chunks.flat())));
-      }}
-      chunks.push(Array.from(value));
-      received += value.length;
-      if (total) document.getElementById('progress-bar').style.width = Math.min(100, received/total*100) + '%';
-      return pump();
-    }});
-  }}
-  return pump();
-}}).then(data => {{
+fetch('/library/data').then(r=>r.json()).then(data => {{
   _LIB_IMAGES_ORIG = data.images;
   _LIB_VIDEOS_ORIG = data.videos;
   IMAGES = [...data.images];
@@ -1308,16 +1289,7 @@ fetch('/library/data').then(r => {{
   document.getElementById('vid-tab').textContent = '🎬 Videos (' + n_vid + ')';
   document.getElementById('loading').textContent = '';
   loadMore();
-}}).catch(err => {{
-  // Fallback to simple fetch if streaming fails
-  fetch('/library/data').then(r=>r.json()).then(data => {{
-    _LIB_IMAGES_ORIG = data.images;
-    _LIB_VIDEOS_ORIG = data.videos;
-    IMAGES = [...data.images];
-    VIDEOS = [...data.videos];
-    document.getElementById('loading').textContent = '';
-    loadMore();
-  }});
+}});
 }});
 </script>
 </body>
