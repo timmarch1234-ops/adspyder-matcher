@@ -756,6 +756,7 @@ a{color:#2196F3}
   <div class="logo">🔍 AdSpyder Matcher</div>
   <button class="nav-item active" onclick="showPage('upload', this)"><span class="icon">📤</span>New Report</button>
   <button class="nav-item" onclick="showPage('reports', this); loadReports()"><span class="icon">📋</span>Past Reports</button>
+  <a class="nav-item" href="/library"><span class="icon">📁</span>Content Library</a>
 </div>
 
 <div class="main">
