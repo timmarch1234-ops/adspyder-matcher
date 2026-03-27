@@ -1073,6 +1073,16 @@ function switchTab(id, btn) {{
 // Load initial batch
 loadMore('images');
 loadMore('videos');
+
+// Infinite scroll
+window.addEventListener('scroll', function() {{
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 400) {{
+    const imgActive = document.getElementById('images').classList.contains('active');
+    const vidActive = document.getElementById('videos').classList.contains('active');
+    if (imgActive && imgIdx < IMAGES.length) loadMore('images');
+    if (vidActive && vidIdx < VIDEOS.length) loadMore('videos');
+  }}
+}});
 </script>
 </body>
 </html>"""
