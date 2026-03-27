@@ -1115,8 +1115,10 @@ function renderImages(items, start, count) {{
     imgObserver.observe(img);
     a.appendChild(img);
     div.appendChild(a);
+    const ext = fname.split('.').pop().toUpperCase();
     const lbl = document.createElement('div');
-    lbl.className = 'label'; lbl.textContent = fname;
+    lbl.className = 'label';
+    lbl.innerHTML = '<span style="color:#e94560;font-size:9px">' + ext + '</span> ' + fname;
     div.appendChild(lbl);
     const cp = document.createElement('button');
     cp.className = 'copy-btn'; cp.textContent = '📋 Copy URL';
