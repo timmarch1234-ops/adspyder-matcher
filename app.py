@@ -1026,6 +1026,10 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 .search-bar{{width:100%;max-width:400px;display:block;margin:0 auto 16px;padding:10px 14px;border-radius:6px;border:1px solid #2a2a4e;background:#16213e;color:#eee;font-size:14px}}
 .search-bar::placeholder{{color:#666}}
 .count-bar{{text-align:center;color:#666;font-size:12px;margin-bottom:8px}}
+.copy-btn{{width:100%;padding:3px;background:#0d0d1a;border:none;color:#666;font-size:10px;cursor:pointer;text-align:center}}
+.copy-btn:hover{{background:#1a1a3e;color:#eee}}
+.copy-btn.copied{{color:#4caf50}}
+#back-top{{position:fixed;bottom:20px;right:20px;background:#e94560;color:white;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;display:none;z-index:999}}
 </style>
 </head>
 <body>
@@ -1041,6 +1045,7 @@ h1{{color:#e94560;text-align:center;margin-bottom:8px}}
 <div id="images" class="section active"><div class="grid" id="img-grid"></div></div>
 <div id="videos" class="section"><div class="grid" id="vid-grid"></div></div>
 <div id="loading">Loading...</div>
+<button id="back-top" onclick="window.scrollTo({{top:0,behavior:'smooth'}})" title="Back to top">↑</button>
 <script>
 const PAGE = 80;
 let IMAGES = [], VIDEOS = [], imgIdx = 0, vidIdx = 0, loading = false;
@@ -1077,6 +1082,11 @@ function renderImages(items, start, count) {{
     lbl.className = 'label';
     lbl.textContent = u.split('/').pop();
     div.appendChild(lbl);
+    const cp = document.createElement('button');
+    cp.className = 'copy-btn';
+    cp.textContent = '📋 Copy URL';
+    cp.onclick = function(e) {{ e.preventDefault(); navigator.clipboard.writeText(u); cp.textContent='✅ Copied!'; cp.classList.add('copied'); setTimeout(()=>{{cp.textContent='📋 Copy URL';cp.classList.remove('copied');}},1500); }};
+    div.appendChild(cp);
     frag.appendChild(div);
   }}
   document.getElementById('img-grid').appendChild(frag);
@@ -1107,6 +1117,11 @@ function renderVideos(items, start, count) {{
     lbl.className = 'label';
     lbl.textContent = u.split('/').pop();
     div.appendChild(lbl);
+    const cp2 = document.createElement('button');
+    cp2.className = 'copy-btn';
+    cp2.textContent = '📋 Copy URL';
+    cp2.onclick = function(e) {{ e.preventDefault(); navigator.clipboard.writeText(u); cp2.textContent='✅ Copied!'; cp2.classList.add('copied'); setTimeout(()=>{{cp2.textContent='📋 Copy URL';cp2.classList.remove('copied');}},1500); }};
+    div.appendChild(cp2);
     frag.appendChild(div);
   }}
   document.getElementById('vid-grid').appendChild(frag);
@@ -1134,6 +1149,11 @@ function switchTab(id, btn) {{
   btn.classList.add('active');
   loadMore();
 }}
+
+// Back to top
+window.addEventListener('scroll', function() {{
+  document.getElementById('back-top').style.display = window.scrollY > 400 ? 'block' : 'none';
+}});
 
 // Search/filter
 let filterQuery = '';
